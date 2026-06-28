@@ -18,15 +18,13 @@ import {
   LayoutDashboard,
   Search,
   FolderHeart,
-  LogOut,
-  Sun,
-  Moon,
-  Compass,
   User,
 } from "lucide-react";
 import { useAuth } from "../hooks/use-auth";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { toggleThemeMode } from "@/entities/settings/model/settings-slice";
+import Image from "next/image";
+import { APP_ICON } from "../../../public";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -143,7 +141,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         >
           {/* Header/Logo */}
           <Box sx={{ p: 3, borderBottom: 1, borderColor: "divider", display: "flex", alignItems: "center", gap: 1.5 }}>
-            <Compass size={24} color={muiTheme.palette.info.main} strokeWidth={2.5} />
+            <Image src={APP_ICON} alt="LeadLens AI" width={26}  height={26} style={{ width: 26, height: 26, borderRadius: 6 }} />
             <Typography
               variant="h5"
               sx={{
@@ -228,7 +226,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Compass size={20} color={muiTheme.palette.info.main} strokeWidth={2.5} />
+              <Image src={APP_ICON} alt="LeadLens AI" width={22}  height={22} style={{ width: 22, height: 22, borderRadius: 4 }} />
               <Typography variant="h6" sx={{ fontWeight: 800, color: "text.primary", letterSpacing: "-0.03em", fontSize: "18px" }}>
                 LeadLens <span style={{ color: muiTheme.palette.info.main }}>AI</span>
               </Typography>

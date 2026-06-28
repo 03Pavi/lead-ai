@@ -63,23 +63,7 @@ export default function DashboardPage() {
   }, []);
 
   const handleRunSavedSearch = async (searchQuery: string, searchId: string) => {
-    setRunningSearchId(searchId);
-    try {
-      const res = await searchApi.search(searchQuery);
-      if (res.success) {
-        dispatch(
-          setSearchSuccess({
-            leads: res.leads,
-            queryDetails: res.queryDetails,
-          })
-        );
-        router.push("/search");
-      }
-    } catch (err) {
-      console.error("Failed to run saved search:", err);
-    } finally {
-      setRunningSearchId(null);
-    }
+    router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
   };
 
   if (loading && !metrics) {
@@ -190,74 +174,6 @@ export default function DashboardPage() {
         }}
       >
         <Stack spacing={4} sx={{ minWidth: 0 }}>
-          <Paper sx={{ p: 3, borderRadius: 2, borderColor: "divider" }}>
-            <Stack spacing={2.5}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center">
-                <Typography variant="h3" sx={{ fontSize: "16px", fontWeight: 700 }}>
-                  Saved AI Searches
-                </Typography>
-                <Button
-                  size="small"
-                  variant="text"
-                  endIcon={<ArrowRight size={14} />}
-                  onClick={() => router.push("/search")}
-                  sx={{ fontSize: "12px", color: "info.main" }}
-                >
-                  New Search
-                </Button>
-              </Stack>
-
-              <Stack spacing={1.5}>
-                {savedSearches.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: "center" }}>
-                    No saved searches. Perform an AI query to get started!
-                  </Typography>
-                ) : (
-                  savedSearches.slice(0, 4).map((search) => (
-                    <Paper
-                      key={search.id}
-                      sx={{
-                        p: 2,
-                        borderRadius: 1.5,
-                        borderColor: "divider",
-                        bgcolor: "background.default",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        gap: 2,
-                      }}
-                    >
-                      <Box sx={{ overflow: "hidden", flex: 1, minWidth: 0, pr: 2 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }} noWrap>
-                          "{search.query}"
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: "11px" }} noWrap>
-                          {search.parsedSummary} • {new Date(search.createdAt).toLocaleDateString()}
-                        </Typography>
-                      </Box>
-                      <Button
-                        size="small"
-                        variant="contained"
-                        disabled={runningSearchId !== null}
-                        onClick={() => handleRunSavedSearch(search.query, search.id)}
-                        sx={{
-                          fontSize: "12px",
-                          py: 0.5,
-                          px: 1.5,
-                          borderRadius: "4px",
-                          bgcolor: "action.selected",
-                          color: "text.primary",
-                          "&:hover": { bgcolor: "action.hover" },
-                        }}
-                      >
-                        {runningSearchId === search.id ? <CircularProgress size={12} color="inherit" /> : "Run"}
-                      </Button>
-                    </Paper>
-                  ))
-                )}
-              </Stack>
-            </Stack>
-          </Paper>
 
           <Paper sx={{ p: 3, borderRadius: 2, borderColor: "divider" }}>
             <Stack spacing={2.5}>

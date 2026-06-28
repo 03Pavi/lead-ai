@@ -30,7 +30,8 @@ import {
   InputLabel,
   useMediaQuery,
   Drawer,
-  Divider
+  Divider,
+  Badge
 } from "@mui/material";
 import {
   Search,
@@ -40,7 +41,9 @@ import {
   Clock,
   Phone,
   Bookmark,
-  Sparkles,
+  Wand2,
+  Star,
+  BrainCircuit,
   Building2,
   Trash2,
   Filter,
@@ -49,6 +52,11 @@ import {
   SlidersHorizontal,
   BookmarkCheck,
   Info,
+  Store,
+  Briefcase,
+  Utensils,
+  Dumbbell,
+  HeartPulse,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -57,6 +65,7 @@ import {
   setSearchFailure,
   toggleLocalFavorite,
 } from "@/entities/lead/model/lead-slice";
+import { setUseNearMe, setUserLocation } from "@/entities/settings/model/settings-slice";
 import {
   addLocalCollection,
   setCollectionsSuccess,
@@ -67,11 +76,13 @@ import { searchApi } from "@/shared/api/search-api";
 import { collectionApi } from "@/shared/api/collection-api";
 import { leadApi } from "@/shared/api/lead-api";
 import { LeadInput } from "@/shared/validation/schemas";
+import { useSearchParams } from "next/navigation";
 import { Navigation } from "lucide-react";
 
 export default function SearchPage() {
   const theme = useTheme();
   const dispatch = useAppDispatch();
+  const searchParams = useSearchParams();
   
   const { searchResults, queryDetails, loading, error, favorites } = useAppSelector((state) => state.lead);
   const { collections } = useAppSelector((state) => state.collection);
@@ -81,8 +92,8 @@ export default function SearchPage() {
   const [infoModalOpen, setInfoModalOpen] = useState(false);
 
   // Near me state
-  const [useNearMe, setUseNearMe] = useState(false);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const useNearMe = useAppSelector((state) => state.settings.useNearMe);
+  const userLocation = useAppSelector((state) => state.settings.userLocation);
   const [locationLoading, setLocationLoading] = useState(false);
   const isUpdatingFiltersRef = useRef(false);
 
@@ -96,6 +107,15 @@ export default function SearchPage() {
   const [sortBy, setSortBy] = useState<"name" | "distance" | "relevance">("relevance");
 
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  const activeFilterCount = 
+    (categoryFilter ? 1 : 0) +
+    (cityFilter && !useNearMe ? 1 : 0) +
+    (maxDistance !== 30 ? 1 : 0) +
+    (websiteRequired !== null ? 1 : 0) +
+    (phoneRequired !== null ? 1 : 0) +
+    (openNowRequired ? 1 : 0) +
+    (sortBy !== "relevance" ? 1 : 0);
 
   const [selectedLead, setSelectedLead] = useState<LeadInput | null>(null);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
@@ -145,8 +165,27 @@ export default function SearchPage() {
     fetchCategories();
   }, []);
 
+  const hasInitializedFromQuery = useRef(false);
+  useEffect(() => {
+    const q = searchParams?.get("q");
+    if (q && !hasInitializedFromQuery.current) {
+      hasInitializedFromQuery.current = true;
+      setQueryInput(q);
+      
+      // If we don't already have results matching this query in Redux, trigger search
+      if (!searchResults.length || queryDetails?.explanation?.indexOf(q) === -1) {
+        handleSearch(q, false);
+      }
+    }
+  }, [searchParams, searchResults.length, queryDetails]);
+
   const handleSearch = async (overrideQuery?: string, isFilterUpdate = false) => {
     let queryToSearch = overrideQuery !== undefined ? overrideQuery : queryInput;
+    if (useNearMe && userLocation && !isFilterUpdate) {
+      if (!queryToSearch.toLowerCase().includes("near me")) {
+        queryToSearch += " near me";
+      }
+    }
     if (!queryToSearch.trim()) return;
 
     if (!isFilterUpdate) {
@@ -180,7 +219,6 @@ export default function SearchPage() {
 
         if (!isFilterUpdate && res.queryDetails) {
           isUpdatingFiltersRef.current = true;
-          setCategoryFilter(res.queryDetails.category || "");
           setCityFilter(res.queryDetails.city || "");
           if (res.queryDetails.parsedFilters) {
             setMaxDistance(res.queryDetails.parsedFilters.maxDistance || 30);
@@ -248,18 +286,18 @@ export default function SearchPage() {
 
   const handleNearMeToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.target.checked;
-    setUseNearMe(checked);
+    dispatch(setUseNearMe(checked));
     if (checked && !userLocation) {
       setLocationLoading(true);
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          dispatch(setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }));
           setLocationLoading(false);
         },
         (err) => {
           console.error("Location error:", err);
           setLocationLoading(false);
-          setUseNearMe(false);
+          dispatch(setUseNearMe(false));
           dispatch(setSearchFailure("Location access denied or unavailable."));
         }
       );
@@ -390,7 +428,7 @@ export default function SearchPage() {
                 input: {
                   startAdornment: (
                     <Box sx={{ mr: 1.5, color: "info.main", display: "flex" }}>
-                      <Sparkles size={20} />
+                      <Wand2 size={20} />
                     </Box>
                   ),
                 }
@@ -417,13 +455,15 @@ export default function SearchPage() {
                 onClick={() => setShowFilters(!showFilters)}
                 sx={{
                   border: 1,
-                  borderColor: showFilters ? "info.main" : "divider",
+                  borderColor: showFilters || activeFilterCount > 0 ? "info.main" : "divider",
                   borderRadius: "6px",
-                  color: showFilters ? "info.main" : "text.secondary",
+                  color: showFilters || activeFilterCount > 0 ? "info.main" : "text.secondary",
                   px: 2,
                 }}
               >
-                <SlidersHorizontal size={20} />
+                <Badge badgeContent={activeFilterCount} color="success">
+                  <SlidersHorizontal size={20} />
+                </Badge>
               </IconButton>
             </Stack>
           </Stack>
@@ -640,6 +680,7 @@ export default function SearchPage() {
                     bgcolor: "background.paper",
                     borderRadius: 2,
                     borderColor: "divider",
+                    borderTop: `4px solid ${theme.palette.primary.main}`,
                     transition: "transform 0.2s, border-color 0.2s",
                     "&:hover": {
                       borderColor: "text.disabled",
@@ -657,7 +698,7 @@ export default function SearchPage() {
                           onClick={() => handleFavoriteToggle(lead.id)}
                           sx={{ color: isFavorited ? "warning.main" : "text.disabled", mt: -0.5 }}
                         >
-                          <Sparkles size={16} fill={isFavorited ? theme.palette.warning.main : "none"} />
+                          <Star size={16} fill={isFavorited ? theme.palette.warning.main : "none"} />
                         </IconButton>
                       </Stack>
 
@@ -751,7 +792,7 @@ export default function SearchPage() {
                         </IconButton>
                       )}
 
-                      <Tooltip title="View location on Google Maps">
+                        <Tooltip title="View location on Google Maps">
                         <IconButton
                           size="small"
                           onClick={() => handleViewMap(lead)}
@@ -792,7 +833,7 @@ export default function SearchPage() {
         )}
         
         {/* Pagination / Load More */}
-        {searchResults.length > 0 && queryDetails?.total && searchResults.length < queryDetails.total ? (
+        {searchResults.length > 0 && !loading ? (
           <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
             <Button
               variant="outlined"
@@ -903,7 +944,7 @@ export default function SearchPage() {
           {queryDetails && (
             <Stack spacing={3}>
               <Stack direction="row" alignItems="center" spacing={1}>
-                <Sparkles size={18} color={theme.palette.info.main} />
+                <BrainCircuit size={18} color={theme.palette.info.main} />
                 <Typography variant="body1" sx={{ fontWeight: 600, color: "text.primary" }}>
                   Worker Routing & Parsing
                 </Typography>

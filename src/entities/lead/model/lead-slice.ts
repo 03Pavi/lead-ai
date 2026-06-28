@@ -29,6 +29,7 @@ interface LeadState {
   searchResults: LeadInput[];
   queryDetails: QueryDetails | null;
   favorites: string[]; // List of favorite lead IDs
+  favoriteLeads: LeadInput[]; // List of full lead objects
   loading: boolean;
   error: string | null;
 }
@@ -37,6 +38,7 @@ const initialState: LeadState = {
   searchResults: [],
   queryDetails: null,
   favorites: [],
+  favoriteLeads: [],
   loading: false,
   error: null,
 };
@@ -76,8 +78,16 @@ const leadSlice = createSlice({
       const idx = state.favorites.indexOf(id);
       if (idx > -1) {
         state.favorites.splice(idx, 1);
+        state.favoriteLeads = state.favoriteLeads?.filter(l => l.id !== id) || [];
       } else {
         state.favorites.push(id);
+        const lead = state.searchResults.find(l => l.id === id);
+        if (lead) {
+          state.favoriteLeads = state.favoriteLeads || [];
+          if (!state.favoriteLeads.some(l => l.id === lead.id)) {
+            state.favoriteLeads.push(lead);
+          }
+        }
       }
     },
     clearSearchResults: (state) => {

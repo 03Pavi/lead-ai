@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     // can consider them (it's the source of truth for routing/parsing).
     let workerQuery_ = query;
     if (filters?.lat && filters?.lng) {
-      workerQuery_ += ` near me: Latitude: ${filters.lat}, Longitude: ${filters.lng}`;
+      workerQuery_ += `. Important Context: The user's exact current location is Latitude ${filters.lat}, Longitude ${filters.lng}. You MUST strictly use these coordinates to fulfill the 'near me' or local search request.`;
     }
     if (filters?.category) workerQuery_ += ` category:${filters.category}`;
     if (filters?.city)     workerQuery_ += ` in ${filters.city}`;

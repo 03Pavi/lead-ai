@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: "LeadLens AI",
   description: "AI-Powered Business Lead Discovery Platform",
   icons: {
-    icon: "/app-logo.png",
+    icon: "/icon.png",
   },
 };
 

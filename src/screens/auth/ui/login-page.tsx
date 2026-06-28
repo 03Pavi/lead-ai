@@ -126,7 +126,7 @@ export default function LoginPage() {
       <Stack spacing={4} sx={{ width: "100%", maxWidth: 420 }}>
         {/* Brand */}
         <Stack direction="row" alignItems="center" justifyContent="center" spacing={1.5}>
-          <Compass size={32} color={theme.palette.info.main} strokeWidth={2.5} />
+          <img src='/icon.png' alt="LeadLens AI" style={{ width: 36, height: 36, borderRadius: 8 }} />
           <Typography
             variant="h4"
             sx={{ fontWeight: 800, letterSpacing: "-0.04em", color: "text.primary" }}

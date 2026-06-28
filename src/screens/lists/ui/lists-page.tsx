@@ -37,10 +37,11 @@ import {
   Link,
   ChevronRight,
   MapPin,
-  ExternalLink,
   FolderPlus,
   BookmarkCheck,
   RotateCcw,
+  Star,
+  ExternalLink,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -65,9 +66,10 @@ export default function ListsPage() {
   const dispatch = useAppDispatch();
   const router = useRouter();
   
-  const { folders, collections, loading } = useAppSelector((state) => state.collection);
+  const { collections, folders, loading } = useAppSelector((state) => state.collection);
+  const { favoriteLeads } = useAppSelector((state) => state.lead);
 
-  const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
+  const [activeCollectionId, setActiveCollectionId] = useState<string | null>("favorites");
   const [activeTab, setActiveTab] = useState<"active" | "archived">("active");
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -98,8 +100,8 @@ export default function ListsPage() {
           })
         );
         const activeCols = res.collections.filter((c: CollectionInput) => !c.isArchived);
-        if (activeCols.length > 0 && !activeCollectionId) {
-          setActiveCollectionId(activeCols[0].id);
+        if (!activeCollectionId) {
+          setActiveCollectionId("favorites");
         }
       }
     } catch (err: any) {
@@ -111,7 +113,17 @@ export default function ListsPage() {
     reloadListsData();
   }, []);
 
-  const activeCollection = collections.find((c) => c.id === activeCollectionId);
+  const activeCollection = activeCollectionId === "favorites"
+    ? {
+        id: "favorites",
+        name: "My Favorites",
+        description: "Your starred and favorited leads across all searches",
+        leads: favoriteLeads || [],
+        isArchived: false,
+        folderId: undefined,
+        createdAt: new Date().toISOString(),
+      }
+    : collections.find((c) => c.id === activeCollectionId);
 
   const handleCreateSubmit = async () => {
     if (!newColName.trim()) return;
@@ -345,7 +357,37 @@ export default function ListsPage() {
 
             <Box sx={{ p: 1.5 }}>
               {activeTab === "active" ? (
-                <Stack spacing={2.5}>
+                <Stack spacing={2} sx={{ mt: 2 }}>
+                  <Stack spacing={1}>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700, fontSize: "11px", px: 1 }}>
+                      QUICK VIEWS
+                    </Typography>
+                    <List sx={{ p: 0 }}>
+                      <ListItem
+                        onClick={() => setActiveCollectionId("favorites")}
+                        sx={{
+                          p: 1,
+                          borderRadius: "6px",
+                          cursor: "pointer",
+                          bgcolor: activeCollectionId === "favorites" ? "action.selected" : "transparent",
+                          "&:hover": { bgcolor: "action.hover" },
+                        }}
+                      >
+                        <ListItemIcon sx={{ minWidth: 28, color: activeCollectionId === "favorites" ? "warning.main" : "text.secondary" }}>
+                          <Star size={16} fill={activeCollectionId === "favorites" ? theme.palette.warning.main : "none"} />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary="My Favorites"
+                          secondary={`${favoriteLeads?.length || 0} leads`}
+                          slotProps={{
+                            primary: { sx: { fontSize: "13px", fontWeight: activeCollectionId === "favorites" ? 700 : 500 } },
+                            secondary: { sx: { fontSize: "10.5px" } }
+                          }}
+                        />
+                      </ListItem>
+                    </List>
+                  </Stack>
+
                   {folders.length > 0 && (
                     <Stack spacing={1}>
                       <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 700, fontSize: "11px", px: 1 }}>
