@@ -1,0 +1,44 @@
+{
+  "name": "ai-lead",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^6.4.7",
+    "@mui/material": "^6.4.8",
+    "@reduxjs/toolkit": "^2.6.0",
+    "axios": "^1.8.4",
+    "i18next": "^24.2.2",
+    "next": "^15.2.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hook-form": "^7.54.2",
+    "@hookform/resolvers": "^3.10.0",
+    "react-i18next": "^15.4.1",
+    "react-redux": "^9.2.0",
+    "redux-persist": "^6.0.0",
+    "sass": "^1.85.1",
+    "i18next-browser-languagedetector": "^8.0.4",
+    "zod": "^3.24.2",
+    "node-cache": "^5.1.2",
+    "lucide-react": "^0.454.0",
+    "firebase-admin": "^12.0.0",
+    "firebase": "^11.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.23",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.3",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2",
+    "@types/node-cache": "^4.0.5",
+    "@capacitor/cli": "^6.2.0"
+  }
+}
