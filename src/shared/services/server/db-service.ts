@@ -281,7 +281,7 @@ export class DBService {
       id: `col-${Math.random().toString(36).substr(2, 9)}`,
       name: data.name,
       description: data.description || "",
-      folderId: data.folderId || null,
+      folderId: data.folderId || undefined,
       leads: [],
       isArchived: false,
       createdAt: new Date().toISOString(),
