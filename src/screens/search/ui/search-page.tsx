@@ -29,6 +29,8 @@ import {
   FormControl,
   InputLabel,
   useMediaQuery,
+  Drawer,
+  Divider
 } from "@mui/material";
 import {
   Search,
@@ -39,6 +41,11 @@ import {
   Phone,
   Bookmark,
   Sparkles,
+  Building2,
+  Trash2,
+  Filter,
+  CheckCircle2,
+  X,
   SlidersHorizontal,
   BookmarkCheck,
   Info,
@@ -101,6 +108,8 @@ export default function SearchPage() {
   const [copyFeedbackId, setCopyFeedbackId] = useState<string | null>(null);
 
   const [categoriesList, setCategoriesList] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     const fetchCollections = async () => {
@@ -143,6 +152,7 @@ export default function SearchPage() {
     if (!isFilterUpdate) {
       dispatch(setSearchStart());
       setSearchTriggered(true);
+      setPage(1);
     }
 
     try {
@@ -187,6 +197,46 @@ export default function SearchPage() {
       }
     } catch (err: any) {
       dispatch(setSearchFailure(err.response?.data?.error || err.message || "Failed to search"));
+    }
+  };
+
+  const handleLoadMore = async () => {
+    if (!queryDetails?.requestUrl) return;
+    
+    setLoadingMore(true);
+    const nextPage = page + 1;
+    setPage(nextPage);
+
+    try {
+      const activeFilters: any = {};
+      if (categoryFilter) activeFilters.category = categoryFilter;
+      if (cityFilter && !useNearMe) activeFilters.city = cityFilter;
+      if (maxDistance > 0 && maxDistance < 100) activeFilters.radius = maxDistance;
+      if (websiteRequired !== null) activeFilters.websiteAvailable = websiteRequired;
+      if (phoneRequired !== null) activeFilters.phoneAvailable = phoneRequired;
+      if (openNowRequired) activeFilters.openingNow = true;
+      if (useNearMe && userLocation) {
+        activeFilters.lat = userLocation.lat;
+        activeFilters.lng = userLocation.lng;
+      }
+      activeFilters.sortBy = sortBy;
+      activeFilters.requestUrl = queryDetails.requestUrl;
+      activeFilters.page = nextPage;
+
+      const res = await searchApi.search(queryInput, activeFilters);
+      if (res.success) {
+        dispatch(
+          setSearchSuccess({
+            leads: res.leads,
+            queryDetails: res.queryDetails,
+            isLoadMore: true,
+          })
+        );
+      }
+    } catch (err: any) {
+      console.error("Failed to load more leads:", err);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -401,70 +451,87 @@ export default function SearchPage() {
         </Stack>
       </Paper>
 
-      {showFilters && (
-        <Paper sx={{ p: 3, borderRadius: 2, borderColor: "divider", bgcolor: "background.paper" }}>
-          <Stack spacing={2.5}>
-            <Typography variant="h3" sx={{ fontSize: "15px", fontWeight: 700 }}>
-              Adjust Search Filters (Instant Updates)
-            </Typography>
+      <Drawer
+        anchor="right"
+        open={showFilters}
+        onClose={() => setShowFilters(false)}
+        PaperProps={{
+          sx: {
+            width: { xs: "100%", sm: 400 },
+            p: 0,
+            bgcolor: "background.paper",
+          },
+        }}
+      >
+        <Box sx={{ p: 3, display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: 1, borderColor: "divider" }}>
+          <Typography variant="h3" sx={{ fontSize: "16px", fontWeight: 700 }}>
+            Adjust Search Filters
+          </Typography>
+          <IconButton size="small" onClick={() => setShowFilters(false)}>
+            <X size={20} />
+          </IconButton>
+        </Box>
 
-            <Box
-              sx={{
-                display: "grid",
-                gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(4, 1fr)" },
-                gap: 3,
-              }}
-            >
-              <FormControl size="small" fullWidth>
-                <InputLabel id="category-filter-label">Category</InputLabel>
-                <Select
-                  labelId="category-filter-label"
-                  label="Category"
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                >
-                  <MenuItem value=""><em>Any Category</em></MenuItem>
-                  {categoriesList.map((cat) => (
-                    <MenuItem key={cat} value={cat}>
-                      {cat.charAt(0).toUpperCase() + cat.slice(1).replace(/_/g, " ")}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <TextField
-                size="small"
-                label="City / Region"
-                value={cityFilter}
-                onChange={(e) => setCityFilter(e.target.value)}
-              />
-
+        <Box sx={{ p: 3, overflowY: "auto" }}>
+          <Stack spacing={4}>
+            <FormControl size="small" fullWidth>
+              <InputLabel id="category-filter-label">Category</InputLabel>
               <Select
-                size="small"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                displayEmpty
+                labelId="category-filter-label"
+                label="Category"
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
               >
-                <MenuItem value="relevance">Sort: Relevance</MenuItem>
-                <MenuItem value="distance">Sort: Distance</MenuItem>
-                <MenuItem value="name">Sort: A-Z Alphabetical</MenuItem>
+                <MenuItem value=""><em>Any Category</em></MenuItem>
+                {categoriesList.map((cat) => (
+                  <MenuItem key={cat} value={cat}>
+                    {cat.charAt(0).toUpperCase() + cat.slice(1).replace(/_/g, " ")}
+                  </MenuItem>
+                ))}
               </Select>
+            </FormControl>
 
-              <Box>
-                <Typography variant="body2" sx={{ fontSize: "11px", fontWeight: 600, mb: 0.5, color: "text.secondary" }}>
-                  Max Distance: {maxDistance === 100 ? "Anywhere" : `${maxDistance} km`}
-                </Typography>
-                <Slider
-                  size="small"
-                  value={maxDistance}
-                  onChange={(_, val) => setMaxDistance(val as number)}
-                  min={1}
-                  max={100}
-                />
-              </Box>
+            <TextField
+              size="small"
+              fullWidth
+              label="City / Region"
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+            />
+
+            <Select
+              size="small"
+              fullWidth
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              displayEmpty
+            >
+              <MenuItem value="relevance">Sort: Relevance</MenuItem>
+              <MenuItem value="distance">Sort: Distance</MenuItem>
+              <MenuItem value="name">Sort: A-Z Alphabetical</MenuItem>
+            </Select>
+
+            <Box>
+              <Typography variant="body2" sx={{ fontSize: "12px", fontWeight: 600, mb: 1, color: "text.secondary" }}>
+                Max Distance: {maxDistance === 100 ? "Anywhere" : `${maxDistance} km`}
+              </Typography>
+              <Slider
+                size="small"
+                value={maxDistance}
+                onChange={(_, val) => setMaxDistance(val as number)}
+                min={1}
+                max={100}
+                sx={{ ml: 1, width: "calc(100% - 16px)" }}
+              />
             </Box>
 
-            <Stack direction={{ xs: "column", sm: "row" }} spacing={3} sx={{ pt: 1 }}>
+            <Divider />
+
+            <Stack spacing={2}>
+              <Typography variant="body2" sx={{ fontSize: "12px", fontWeight: 600, color: "text.secondary" }}>
+                Additional Requirements
+              </Typography>
+              
               <FormControlLabel
                 control={
                   <Switch
@@ -472,8 +539,8 @@ export default function SearchPage() {
                     onChange={(e) => setWebsiteRequired(e.target.checked ? true : null)}
                   />
                 }
-                label="Has Website"
-                sx={{ "& .MuiFormControlLabel-label": { fontSize: "13px" } }}
+                label="Must have a Website"
+                sx={{ "& .MuiFormControlLabel-label": { fontSize: "14px" } }}
               />
 
               <FormControlLabel
@@ -483,8 +550,8 @@ export default function SearchPage() {
                     onChange={(e) => setWebsiteRequired(e.target.checked ? false : null)}
                   />
                 }
-                label="No Website"
-                sx={{ "& .MuiFormControlLabel-label": { fontSize: "13px" } }}
+                label="Must NOT have a Website"
+                sx={{ "& .MuiFormControlLabel-label": { fontSize: "14px" } }}
               />
 
               <FormControlLabel
@@ -494,8 +561,8 @@ export default function SearchPage() {
                     onChange={(e) => setPhoneRequired(e.target.checked ? true : null)}
                   />
                 }
-                label="Has Phone"
-                sx={{ "& .MuiFormControlLabel-label": { fontSize: "13px" } }}
+                label="Must have a Phone Number"
+                sx={{ "& .MuiFormControlLabel-label": { fontSize: "14px" } }}
               />
 
               <FormControlLabel
@@ -505,13 +572,18 @@ export default function SearchPage() {
                     onChange={(e) => setOpenNowRequired(e.target.checked)}
                   />
                 }
-                label="Open Now"
-                sx={{ "& .MuiFormControlLabel-label": { fontSize: "13px" } }}
+                label="Must be Open Now"
+                sx={{ "& .MuiFormControlLabel-label": { fontSize: "14px" } }}
               />
             </Stack>
           </Stack>
-        </Paper>
-      )}
+        </Box>
+        <Box sx={{ p: 3, borderTop: 1, borderColor: "divider", bgcolor: "background.default" }}>
+          <Button variant="contained" fullWidth onClick={() => setShowFilters(false)}>
+            View Results
+          </Button>
+        </Box>
+      </Drawer>
 
       {error && (
         <Alert severity="error" sx={{ borderRadius: "6px" }}>
@@ -718,6 +790,21 @@ export default function SearchPage() {
             })}
           </Box>
         )}
+        
+        {/* Pagination / Load More */}
+        {searchResults.length > 0 && queryDetails?.total && searchResults.length < queryDetails.total ? (
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+            <Button
+              variant="outlined"
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              startIcon={loadingMore ? <CircularProgress size={16} color="inherit" /> : <Search size={16} />}
+              sx={{ px: 4, py: 1.5, borderRadius: "50px", fontWeight: 600 }}
+            >
+              Load More Results
+            </Button>
+          </Box>
+        ) : null}
       </Stack>
 
       <Dialog fullScreen={isMobile} open={saveDialogOpen} onClose={() => setSaveDialogOpen(false)} maxWidth="xs" fullWidth>

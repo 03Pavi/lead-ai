@@ -189,7 +189,7 @@ export default function DashboardPage() {
           gap: 4,
         }}
       >
-        <Stack spacing={4}>
+        <Stack spacing={4} sx={{ minWidth: 0 }}>
           <Paper sx={{ p: 3, borderRadius: 2, borderColor: "divider" }}>
             <Stack spacing={2.5}>
               <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -227,7 +227,7 @@ export default function DashboardPage() {
                         gap: 2,
                       }}
                     >
-                      <Box sx={{ overflow: "hidden" }}>
+                      <Box sx={{ overflow: "hidden", flex: 1, minWidth: 0, pr: 2 }}>
                         <Typography variant="body2" sx={{ fontWeight: 600, color: "text.primary" }} noWrap>
                           "{search.query}"
                         </Typography>
@@ -298,8 +298,8 @@ export default function DashboardPage() {
                       >
                         <Flame size={14} />
                       </Box>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="body2" sx={{ fontSize: "13px", color: "text.primary" }}>
+                      <Box sx={{ flexGrow: 1, minWidth: 0, overflow: "hidden" }}>
+                        <Typography variant="body2" sx={{ fontSize: "13px", color: "text.primary" }} noWrap>
                           {log.description}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ fontSize: "10px", mt: 0.5 }}>
@@ -314,7 +314,7 @@ export default function DashboardPage() {
           </Paper>
         </Stack>
 
-        <Stack spacing={4}>
+        <Stack spacing={4} sx={{ minWidth: 0 }}>
           <Paper sx={{ p: 3, borderRadius: 2, borderColor: "divider" }}>
             <Stack spacing={2.5}>
               <Stack direction="row" alignItems="center" spacing={1}>

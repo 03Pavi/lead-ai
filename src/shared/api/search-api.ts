@@ -10,6 +10,8 @@ interface SearchFilters {
   websiteAvailable?: boolean;
   phoneAvailable?: boolean;
   openingNow?: boolean;
+  page?: number;
+  requestUrl?: string;
 }
 
 export const searchApi = {

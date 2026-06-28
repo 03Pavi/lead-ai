@@ -213,7 +213,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </Box>
       )}
 
-      <Box sx={{ display: "flex", flexDirection: "column", flexGrow: 1, height: "100vh" }}>
+      <Box sx={{ display: "flex", flexDirection: "column", flexGrow: 1, height: "100vh", minWidth: 0 }}>
         {/* MOBILE HEADER */}
         {isMobile && (
           <Box
@@ -297,10 +297,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   width: 60,
                   height: 48,
                   ...(isSearch && {
-                    position: "absolute",
-                    top: -24,
-                    left: "50%",
-                    transform: "translateX(-50%)",
+                    transform: "translateY(-16px)",
                     bgcolor: "info.main",
                     color: "white",
                     width: 56,
@@ -308,7 +305,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                     borderRadius: "50%",
                     boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                     "&:active": {
-                      transform: "translateX(-50%) scale(0.95)",
+                      transform: "translateY(-16px) scale(0.95)",
                     },
                   }),
                   ...(!isSearch && {

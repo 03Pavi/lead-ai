@@ -80,14 +80,27 @@ export async function POST(request: Request) {
     let source = "worker";
 
     try {
-      const workerRes = await workerQuery(workerQuery_);
-
-      if (workerRes.success && workerRes.result) {
-        plan = workerRes.plan;
-        requestUrl = (workerRes as any).request_url;
-        workerResult = workerRes.result;
-        const raw = workerRes.result.businesses ?? workerRes.result.results ?? [];
+      if (filters?.requestUrl && filters?.page && filters.page > 1) {
+        // Direct pagination fetch without invoking NLP parser
+        const pageUrl = `${filters.requestUrl}${filters.requestUrl.includes('?') ? '&' : '?'}page=${filters.page}`;
+        const res = await fetch(pageUrl);
+        const data = await res.json();
+        
+        requestUrl = filters.requestUrl;
+        workerResult = data;
+        const raw = data.businesses ?? data.results ?? [];
         leads = raw.map(normaliseWorkerBusiness);
+        source = "pagination";
+      } else {
+        const workerRes = await workerQuery(workerQuery_);
+
+        if (workerRes.success && workerRes.result) {
+          plan = workerRes.plan;
+          requestUrl = (workerRes as any).request_url;
+          workerResult = workerRes.result;
+          const raw = workerRes.result.businesses ?? workerRes.result.results ?? [];
+          leads = raw.map(normaliseWorkerBusiness);
+        }
       }
     } catch (err) {
       console.warn("Worker failed:", err);

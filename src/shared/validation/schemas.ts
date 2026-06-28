@@ -73,6 +73,8 @@ export const searchRequestSchema = z.object({
     websiteAvailable: z.boolean().nullable().optional(),
     phoneAvailable: z.boolean().nullable().optional(),
     openingNow: z.boolean().optional(),
+    page: z.number().optional(),
+    requestUrl: z.string().optional(),
     sortBy: z.enum(["relevance", "distance", "name"]).optional(),
   }).optional(),
 });

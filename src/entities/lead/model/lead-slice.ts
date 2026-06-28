@@ -51,9 +51,16 @@ const leadSlice = createSlice({
     },
     setSearchSuccess: (
       state,
-      action: PayloadAction<{ leads: LeadInput[]; queryDetails: QueryDetails }>
+      action: PayloadAction<{ leads: LeadInput[]; queryDetails: QueryDetails; isLoadMore?: boolean }>
     ) => {
-      state.searchResults = action.payload.leads;
+      if (action.payload.isLoadMore) {
+        // filter out duplicates by ID
+        const existingIds = new Set(state.searchResults.map((l) => l.id));
+        const newLeads = action.payload.leads.filter((l) => !existingIds.has(l.id));
+        state.searchResults = [...state.searchResults, ...newLeads];
+      } else {
+        state.searchResults = action.payload.leads;
+      }
       state.queryDetails = action.payload.queryDetails;
       state.loading = false;
     },

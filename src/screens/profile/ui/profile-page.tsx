@@ -5,12 +5,12 @@ import { Box, Typography, Paper, Stack, Avatar, Button, IconButton, useTheme } f
 import { LogOut, Sun, Moon, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/shared/hooks/use-auth";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { toggleThemeMode } from "@/store/theme-slice";
+import { toggleThemeMode } from "@/entities/settings/model/settings-slice";
 
 export default function ProfilePage() {
   const { user, logout } = useAuth();
   const dispatch = useAppDispatch();
-  const themeMode = useAppSelector((state) => state.theme.mode);
+  const themeMode = useAppSelector((state) => state.settings.themeMode);
   const theme = useTheme();
 
   return (

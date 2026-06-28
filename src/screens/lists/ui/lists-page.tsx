@@ -24,6 +24,7 @@ import {
   ListItemIcon,
   Menu,
   useMediaQuery,
+  ListItem,
 } from "@mui/material";
 import {
   Folder,
@@ -259,8 +260,8 @@ export default function ListsPage() {
 
   return (
     <Stack spacing={4}>
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Box>
+      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={2}>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="h2" sx={{ fontWeight: 800, fontSize: { xs: "28px", sm: "36px" } }}>
             Saved Lists
           </Typography>
@@ -275,7 +276,7 @@ export default function ListsPage() {
             setCreateType("collection");
             setCreateDialogOpen(true);
           }}
-          sx={{ fontWeight: 600 }}
+          sx={{ fontWeight: 600, flexShrink: 0, whiteSpace: "nowrap" }}
         >
           Create List
         </Button>
@@ -522,15 +523,6 @@ export default function ListsPage() {
                       </MenuItem>
                     </Menu>
 
-                    <Button
-                      size="small"
-                      variant="contained"
-                      onClick={() => setCrmDialogOpen(true)}
-                      startIcon={<Link size={14} />}
-                      sx={{ fontSize: "12px", py: 0.5, bgcolor: "info.main" }}
-                    >
-                      Sync CRM
-                    </Button>
 
                     <IconButton size="small" onClick={() => handleArchiveToggle(activeCollection)} sx={{ border: 1, borderColor: "divider", borderRadius: "6px" }}>
                       {activeCollection.isArchived ? <RotateCcw size={15} /> : <Archive size={15} />}
