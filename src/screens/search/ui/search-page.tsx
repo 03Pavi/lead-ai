@@ -132,6 +132,29 @@ export default function SearchPage() {
   const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
+    const fetchLocationIfEnabled = async () => {
+      if (useNearMe && !userLocation) {
+        setLocationLoading(true);
+        try {
+          const response = await fetch("https://ipapi.co/json/");
+          if (!response.ok) {
+            throw new Error("Failed to fetch location");
+          }
+          const data = await response.json();
+          dispatch(setUserLocation({ lat: data.latitude, lng: data.longitude }));
+          setLocationLoading(false);
+        } catch (err) {
+          console.error("Location error on mount:", err);
+          setLocationLoading(false);
+          dispatch(setUseNearMe(false));
+          dispatch(setSearchFailure("Location access denied or unavailable."));
+        }
+      }
+    };
+    fetchLocationIfEnabled();
+  }, [useNearMe, userLocation, dispatch]);
+
+  useEffect(() => {
     const fetchCollections = async () => {
       try {
         const res = await collectionApi.getCollections();
@@ -181,11 +204,6 @@ export default function SearchPage() {
 
   const handleSearch = async (overrideQuery?: string, isFilterUpdate = false) => {
     let queryToSearch = overrideQuery !== undefined ? overrideQuery : queryInput;
-    if (useNearMe && userLocation && !isFilterUpdate) {
-      if (!queryToSearch.toLowerCase().includes("near me")) {
-        queryToSearch += " near me";
-      }
-    }
     if (!queryToSearch.trim()) return;
 
     if (!isFilterUpdate) {
@@ -196,17 +214,18 @@ export default function SearchPage() {
 
     try {
       const activeFilters: any = {};
-      if (categoryFilter) activeFilters.category = categoryFilter;
-      if (cityFilter && !useNearMe) activeFilters.city = cityFilter; // Don't send city if using coordinates
-      if (maxDistance > 0 && maxDistance < 100) activeFilters.radius = maxDistance;
-      if (websiteRequired !== null) activeFilters.websiteAvailable = websiteRequired;
-      if (phoneRequired !== null) activeFilters.phoneAvailable = phoneRequired;
-      if (openNowRequired) activeFilters.openingNow = true;
-      if (useNearMe && userLocation && !isFilterUpdate) {
+      if (useNearMe && userLocation) {
         activeFilters.lat = userLocation.lat;
         activeFilters.lng = userLocation.lng;
+      } else {
+        if (categoryFilter) activeFilters.category = categoryFilter;
+        if (cityFilter) activeFilters.city = cityFilter;
+        if (maxDistance > 0 && maxDistance < 100) activeFilters.radius = maxDistance;
+        if (websiteRequired !== null) activeFilters.websiteAvailable = websiteRequired;
+        if (phoneRequired !== null) activeFilters.phoneAvailable = phoneRequired;
+        if (openNowRequired) activeFilters.openingNow = true;
+        activeFilters.sortBy = sortBy;
       }
-      activeFilters.sortBy = sortBy;
 
       const res = await searchApi.search(queryToSearch, activeFilters);
       if (res.success) {
@@ -247,17 +266,18 @@ export default function SearchPage() {
 
     try {
       const activeFilters: any = {};
-      if (categoryFilter) activeFilters.category = categoryFilter;
-      if (cityFilter && !useNearMe) activeFilters.city = cityFilter;
-      if (maxDistance > 0 && maxDistance < 100) activeFilters.radius = maxDistance;
-      if (websiteRequired !== null) activeFilters.websiteAvailable = websiteRequired;
-      if (phoneRequired !== null) activeFilters.phoneAvailable = phoneRequired;
-      if (openNowRequired) activeFilters.openingNow = true;
       if (useNearMe && userLocation) {
         activeFilters.lat = userLocation.lat;
         activeFilters.lng = userLocation.lng;
+      } else {
+        if (categoryFilter) activeFilters.category = categoryFilter;
+        if (cityFilter) activeFilters.city = cityFilter;
+        if (maxDistance > 0 && maxDistance < 100) activeFilters.radius = maxDistance;
+        if (websiteRequired !== null) activeFilters.websiteAvailable = websiteRequired;
+        if (phoneRequired !== null) activeFilters.phoneAvailable = phoneRequired;
+        if (openNowRequired) activeFilters.openingNow = true;
+        activeFilters.sortBy = sortBy;
       }
-      activeFilters.sortBy = sortBy;
       activeFilters.requestUrl = queryDetails.requestUrl;
       activeFilters.page = nextPage;
 
@@ -284,23 +304,25 @@ export default function SearchPage() {
     }
   }, [categoryFilter, cityFilter, maxDistance, websiteRequired, phoneRequired, openNowRequired, sortBy]);
 
-  const handleNearMeToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNearMeToggle = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const checked = e.target.checked;
     dispatch(setUseNearMe(checked));
     if (checked && !userLocation) {
       setLocationLoading(true);
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          dispatch(setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }));
-          setLocationLoading(false);
-        },
-        (err) => {
-          console.error("Location error:", err);
-          setLocationLoading(false);
-          dispatch(setUseNearMe(false));
-          dispatch(setSearchFailure("Location access denied or unavailable."));
+      try {
+        const response = await fetch("https://ipapi.co/json/");
+        if (!response.ok) {
+          throw new Error("Failed to fetch location");
         }
-      );
+        const data = await response.json();
+        dispatch(setUserLocation({ lat: data.latitude, lng: data.longitude }));
+        setLocationLoading(false);
+      } catch (err) {
+        console.error("Location error:", err);
+        setLocationLoading(false);
+        dispatch(setUseNearMe(false));
+        dispatch(setSearchFailure("Location access denied or unavailable."));
+      }
     }
   };
 
