@@ -9,9 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@capacitor/android": "^8.4.1",
-    "@capacitor/core": "^8.4.1",
-    "@capacitor/ios": "^8.4.1",
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/core": "^6.2.1",
+    "@capacitor/ios": "^6.2.1",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@hookform/resolvers": "^3.10.0",
@@ -36,7 +36,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.2.0",
+    "@capacitor/cli": "^6.2.1",
     "@types/node": "^20.17.23",
     "@types/node-cache": "^4.0.5",
     "@types/react": "^19.0.10",
