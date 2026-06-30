@@ -32,6 +32,7 @@ interface LeadState {
   favoriteLeads: LeadInput[]; // List of full lead objects
   loading: boolean;
   error: string | null;
+  lastQuery: string;
 }
 
 const initialState: LeadState = {
@@ -41,6 +42,7 @@ const initialState: LeadState = {
   favoriteLeads: [],
   loading: false,
   error: null,
+  lastQuery: "",
 };
 
 const leadSlice = createSlice({
@@ -53,7 +55,7 @@ const leadSlice = createSlice({
     },
     setSearchSuccess: (
       state,
-      action: PayloadAction<{ leads: LeadInput[]; queryDetails: QueryDetails; isLoadMore?: boolean }>
+      action: PayloadAction<{ leads: LeadInput[]; queryDetails: QueryDetails; isLoadMore?: boolean; query?: string }>
     ) => {
       if (action.payload.isLoadMore) {
         // filter out duplicates by ID
@@ -62,6 +64,9 @@ const leadSlice = createSlice({
         state.searchResults = [...state.searchResults, ...newLeads];
       } else {
         state.searchResults = action.payload.leads;
+      }
+      if (action.payload.query !== undefined) {
+        state.lastQuery = action.payload.query;
       }
       state.queryDetails = action.payload.queryDetails;
       state.loading = false;

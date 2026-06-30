@@ -77,6 +77,7 @@ export async function POST(request: Request) {
     if (filters?.category) workerQuery_ += ` category:${filters.category}`;
     if (filters?.city)     workerQuery_ += ` in ${filters.city}`;
     if (filters?.radius)   workerQuery_ += ` within ${filters.radius} km`;
+    if (filters?.limit)    workerQuery_ += ` limit:${filters.limit}`;
 
     // ── Call the Cloudflare Worker (primary) ─────────────────────────────────
     let leads: any[] = [];

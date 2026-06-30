@@ -74,6 +74,7 @@ export const searchRequestSchema = z.object({
     phoneAvailable: z.boolean().nullable().optional(),
     openingNow: z.boolean().optional(),
     page: z.number().optional(),
+    limit: z.number().optional(),
     requestUrl: z.string().optional(),
     sortBy: z.enum(["relevance", "distance", "name"]).optional(),
   }).optional(),

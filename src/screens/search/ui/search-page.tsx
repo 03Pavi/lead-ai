@@ -57,6 +57,7 @@ import {
   Utensils,
   Dumbbell,
   HeartPulse,
+  HelpCircle,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
@@ -85,12 +86,13 @@ export default function SearchPage() {
   const dispatch = useAppDispatch();
   const searchParams = useSearchParams();
   
-  const { searchResults, queryDetails, loading, error, favorites } = useAppSelector((state) => state.lead);
+  const { searchResults, queryDetails, loading, error, favorites, lastQuery } = useAppSelector((state) => state.lead);
   const { collections } = useAppSelector((state) => state.collection);
 
   const [queryInput, setQueryInput] = useState("");
   const [searchTriggered, setSearchTriggered] = useState(false);
   const [infoModalOpen, setInfoModalOpen] = useState(false);
+  const [categoriesHelpOpen, setCategoriesHelpOpen] = useState(false);
 
   // Near me state
   const useNearMe = useAppSelector((state) => state.settings.useNearMe);
@@ -237,8 +239,14 @@ export default function SearchPage() {
           setSearchSuccess({
             leads: res.leads,
             queryDetails: res.queryDetails,
+            query: queryToSearch,
           })
         );
+
+        // If search returned empty leads, trigger helper popup automatically
+        if (!res.leads || res.leads.length === 0) {
+          setCategoriesHelpOpen(true);
+        }
 
         if (!isFilterUpdate && res.queryDetails) {
           isUpdatingFiltersRef.current = true;
@@ -262,8 +270,6 @@ export default function SearchPage() {
   };
 
   const handleLoadMore = async () => {
-    if (!queryDetails?.requestUrl) return;
-    
     setLoadingMore(true);
     const nextPage = page + 1;
     setPage(nextPage);
@@ -282,10 +288,17 @@ export default function SearchPage() {
         if (openNowRequired) activeFilters.openingNow = true;
         activeFilters.sortBy = sortBy;
       }
-      activeFilters.requestUrl = queryDetails.requestUrl;
+      
+      // Request double the current search results length
+      const currentCount = searchResults.length;
+      activeFilters.limit = currentCount > 0 ? currentCount * 2 : 40;
       activeFilters.page = nextPage;
 
-      const res = await searchApi.search(queryInput, activeFilters);
+      if (queryDetails?.requestUrl) {
+        activeFilters.requestUrl = queryDetails.requestUrl;
+      }
+
+      const res = await searchApi.search(lastQuery || queryInput, activeFilters);
       if (res.success) {
         dispatch(
           setSearchSuccess({
@@ -458,6 +471,13 @@ export default function SearchPage() {
                       <Wand2 size={20} />
                     </Box>
                   ),
+                  endAdornment: (
+                    <Tooltip title="View supported categories & examples">
+                      <IconButton size="small" onClick={() => setCategoriesHelpOpen(true)} sx={{ color: "text.secondary" }}>
+                        <HelpCircle size={20} />
+                      </IconButton>
+                    </Tooltip>
+                  )
                 }
               }}
               sx={{
@@ -541,31 +561,6 @@ export default function SearchPage() {
 
         <Box sx={{ p: 3, overflowY: "auto" }}>
           <Stack spacing={4}>
-            <FormControl size="small" fullWidth>
-              <InputLabel id="category-filter-label">Category</InputLabel>
-              <Select
-                labelId="category-filter-label"
-                label="Category"
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-              >
-                <MenuItem value=""><em>Any Category</em></MenuItem>
-                {categoriesList.map((cat) => (
-                  <MenuItem key={cat} value={cat}>
-                    {cat.charAt(0).toUpperCase() + cat.slice(1).replace(/_/g, " ")}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <TextField
-              size="small"
-              fullWidth
-              label="City / Region"
-              value={cityFilter}
-              onChange={(e) => setCityFilter(e.target.value)}
-            />
-
             <Select
               size="small"
               fullWidth
@@ -655,6 +650,20 @@ export default function SearchPage() {
       {error && (
         <Alert severity="error" sx={{ borderRadius: "6px" }}>
           {error}
+        </Alert>
+      )}
+
+      {searchTriggered && !loading && searchResults.length === 0 && (
+        <Alert 
+          severity="warning" 
+          sx={{ 
+            borderRadius: "6px", 
+            cursor: "pointer", 
+            "&:hover": { opacity: 0.9 } 
+          }}
+          onClick={() => setCategoriesHelpOpen(true)}
+        >
+          No business leads found. Please search using our <strong>Supported Categories & Query Examples</strong>. Click here to view them.
         </Alert>
       )}
 
@@ -861,7 +870,7 @@ export default function SearchPage() {
         
         {/* Pagination / Load More */}
         {searchResults.length > 0 && !loading ? (
-          <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 4, mb: { xs: 8, sm: 0 } }}>
             <Button
               variant="outlined"
               onClick={handleLoadMore}
@@ -1024,6 +1033,73 @@ export default function SearchPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setInfoModalOpen(false)} color="inherit">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Categories Help & Examples Modal */}
+      <Dialog fullScreen={isMobile} open={categoriesHelpOpen} onClose={() => setCategoriesHelpOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, display: "flex", alignItems: "center", gap: 1 }}>
+          <HelpCircle size={22} color={theme.palette.info.main} />
+          Supported Categories & Query Examples
+        </DialogTitle>
+        <DialogContent dividers>
+          <Stack spacing={3}>
+            <Box>
+              <Typography variant="body2" sx={{ fontWeight: 700, mb: 1.5, color: "text.primary" }}>
+                How to search:
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                LeadLens AI parses your natural language query into a target category and location. Use phrases like:
+              </Typography>
+              <Box sx={{ pl: 2, borderLeft: "3px solid", borderColor: "info.main", display: "flex", flexDirection: "column", gap: 1 }}>
+                <Typography variant="body2" sx={{ fontStyle: "italic", fontWeight: 500 }}>
+                  "Find 10 dentists in London"
+                </Typography>
+                <Typography variant="body2" sx={{ fontStyle: "italic", fontWeight: 500 }}>
+                  "Gyms near Milan with websites"
+                </Typography>
+                <Typography variant="body2" sx={{ fontStyle: "italic", fontWeight: 500 }}>
+                  "Discover bakeries in Paris with phone numbers"
+                </Typography>
+              </Box>
+            </Box>
+
+            <Divider />
+
+            <Box>
+              <Typography variant="body2" sx={{ fontWeight: 700, mb: 1.5, color: "text.primary" }}>
+                Supported Categories ({categoriesList.length}):
+              </Typography>
+              <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                {categoriesList.map((cat) => (
+                  <Chip
+                    key={cat}
+                    label={cat.replace(/_/g, " ")}
+                    size="small"
+                    onClick={() => {
+                      setQueryInput(`Find ${cat.replace(/_/g, " ")}s near me`);
+                      setCategoriesHelpOpen(false);
+                    }}
+                    sx={{
+                      cursor: "pointer",
+                      fontSize: "11.5px",
+                      borderRadius: "6px",
+                      textTransform: "capitalize",
+                      "&:hover": {
+                        bgcolor: "info.light",
+                        color: "info.contrastText"
+                      }
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCategoriesHelpOpen(false)} color="inherit">
             Close
           </Button>
         </DialogActions>
