@@ -26,11 +26,17 @@ function isRateLimited(ip: string): boolean {
 
 export async function POST(request: Request) {
   try {
-    // ── Auth (optional bearer token check) ──────────────────────────────────
+    // ── Auth (extract userId from bearer token) ─────────────────────────────
     const authHeader = request.headers.get("authorization") || "";
     const token = authHeader.replace(/^bearer\s+/i, "");
-    if (token && !AuthService.verifyAccessToken(token)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    let userId: string | null = null;
+
+    if (token) {
+      const payload = AuthService.verifyAccessToken(token);
+      if (!payload) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      userId = payload.userId;
     }
 
     // ── Rate limit ───────────────────────────────────────────────────────────
@@ -121,9 +127,11 @@ export async function POST(request: Request) {
     const limit    = plan?.params?.limit || leads.length;
     const parsedSummary = `${category} in ${city} (${limit} results)`;
 
-    // ── Log & save search ────────────────────────────────────────────────────
-    await DBService.addLog("search", `Searched: "${query}"`);
-    await DBService.saveSearch(query, parsedSummary);
+    // ── Log & save search (user-scoped) ──────────────────────────────────────
+    if (userId) {
+      await DBService.addLog(userId, "search", `Searched: "${query}"`);
+      await DBService.saveSearch(userId, query, parsedSummary);
+    }
 
     const payload = {
       leads,

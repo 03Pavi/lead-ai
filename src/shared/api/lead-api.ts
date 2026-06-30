@@ -11,10 +11,11 @@ export const leadApi = {
     return response.data;
   },
 
-  toggleFavorite: async (leadId: string) => {
+  toggleFavorite: async (leadId: string, lead?: LeadInput) => {
     const response = await apiClient.post("/leads", {
       action: "favorite",
       leadId,
+      lead,
     });
     return response.data;
   },

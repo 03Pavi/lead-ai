@@ -70,8 +70,9 @@ const leadSlice = createSlice({
       state.loading = false;
       state.error = action.payload;
     },
-    setFavorites: (state, action: PayloadAction<string[]>) => {
-      state.favorites = action.payload;
+    setFavorites: (state, action: PayloadAction<LeadInput[]>) => {
+      state.favoriteLeads = action.payload || [];
+      state.favorites = (action.payload || []).map(l => l.id);
     },
     toggleLocalFavorite: (state, action: PayloadAction<string>) => {
       const id = action.payload;

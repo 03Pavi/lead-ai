@@ -55,10 +55,11 @@ import {
   deleteLocalFolder,
   removeLeadFromLocalCollection,
 } from "@/entities/collection/model/collection-slice";
+import { setFavorites } from "@/entities/lead/model/lead-slice";
 import { collectionApi } from "@/shared/api/collection-api";
 import { leadApi } from "@/shared/api/lead-api";
 import { CollectionInput, FolderInput, LeadInput } from "@/shared/validation/schemas";
-import axios from "axios";
+import { apiClient } from "@/shared/api/client";
 import { useRouter } from "next/navigation";
 
 export default function ListsPage() {
@@ -99,6 +100,9 @@ export default function ListsPage() {
             savedSearches: res.savedSearches,
           })
         );
+        if (res.favorites) {
+          dispatch(setFavorites(res.favorites));
+        }
         const activeCols = res.collections.filter((c: CollectionInput) => !c.isArchived);
         if (!activeCollectionId) {
           setActiveCollectionId("favorites");
@@ -222,7 +226,7 @@ export default function ListsPage() {
     if (!activeCollectionId) return;
 
     try {
-      const response = await axios.post("/api/export", {
+      const response = await apiClient.post("/export", {
         collectionId: activeCollectionId,
         format,
       }, {

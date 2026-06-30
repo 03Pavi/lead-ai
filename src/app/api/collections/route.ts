@@ -1,16 +1,20 @@
 import { NextResponse } from "next/server";
 import { DBService } from "@/shared/services/server/db-service";
 import { createCollectionSchema, createFolderSchema } from "@/shared/validation/schemas";
+import { getUserIdFromRequest } from "@/shared/services/server/auth-helper";
+
+const FALLBACK_USER_ID = "anonymous";
 
 export async function GET(request: Request) {
   try {
+    const userId = getUserIdFromRequest(request) || FALLBACK_USER_ID;
     const { searchParams } = new URL(request.url);
     const metrics = searchParams.get("metrics") === "true";
 
     if (metrics) {
-      const telemetry = await DBService.getTelemetryMetrics();
-      const logs = await DBService.getActivityLogs();
-      const savedSearches = await DBService.getSavedSearches();
+      const telemetry = await DBService.getTelemetryMetrics(userId);
+      const logs = await DBService.getActivityLogs(userId);
+      const savedSearches = await DBService.getSavedSearches(userId);
       return NextResponse.json({
         success: true,
         metrics: telemetry,
@@ -19,10 +23,10 @@ export async function GET(request: Request) {
       });
     }
 
-    const folders = await DBService.getFolders();
-    const collections = await DBService.getCollections();
-    const favorites = await DBService.getFavorites();
-    const savedSearches = await DBService.getSavedSearches();
+    const folders = await DBService.getFolders(userId);
+    const collections = await DBService.getCollections(userId);
+    const favorites = await DBService.getFavorites(userId);
+    const savedSearches = await DBService.getSavedSearches(userId);
 
     return NextResponse.json({
       success: true,
@@ -39,6 +43,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const userId = getUserIdFromRequest(request);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { type, ...data } = body;
 
@@ -50,7 +59,7 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      const collection = await DBService.createCollection(result.data);
+      const collection = await DBService.createCollection(userId, result.data);
       return NextResponse.json({ success: true, collection });
     }
 
@@ -62,7 +71,7 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      const folder = await DBService.createFolder(result.data);
+      const folder = await DBService.createFolder(userId, result.data);
       return NextResponse.json({ success: true, folder });
     }
 
@@ -75,6 +84,11 @@ export async function POST(request: Request) {
 
 export async function PUT(request: Request) {
   try {
+    const userId = getUserIdFromRequest(request);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { id, type, ...updates } = body;
 
@@ -83,7 +97,7 @@ export async function PUT(request: Request) {
     }
 
     if (type === "collection") {
-      const updated = await DBService.updateCollection(id, updates);
+      const updated = await DBService.updateCollection(userId, id, updates);
       if (!updated) {
         return NextResponse.json({ error: "Collection not found" }, { status: 404 });
       }
@@ -99,6 +113,11 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const userId = getUserIdFromRequest(request);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
     const type = searchParams.get("type");
@@ -108,12 +127,12 @@ export async function DELETE(request: Request) {
     }
 
     if (type === "collection") {
-      await DBService.deleteCollection(id);
+      await DBService.deleteCollection(userId, id);
       return NextResponse.json({ success: true, message: "Collection deleted successfully" });
     }
 
     if (type === "folder") {
-      await DBService.deleteFolder(id);
+      await DBService.deleteFolder(userId, id);
       return NextResponse.json({ success: true, message: "Folder deleted successfully" });
     }
 

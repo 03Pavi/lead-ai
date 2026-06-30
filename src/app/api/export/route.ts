@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { DBService } from "@/shared/services/server/db-service";
+import { getUserIdFromRequest } from "@/shared/services/server/auth-helper";
 
 export async function POST(request: Request) {
   try {
+    const userId = getUserIdFromRequest(request);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { collectionId, format } = body;
 
@@ -10,18 +16,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "collectionId and format are required" }, { status: 400 });
     }
 
-    const collections = await DBService.getCollections();
-    const collection = collections.find(c => c.id === collectionId);
+    let collection = null;
+    let leads = [];
 
-    if (!collection) {
-      return NextResponse.json({ error: "Collection not found" }, { status: 404 });
+    if (collectionId === "favorites") {
+      const favLeads = await DBService.getFavorites(userId);
+      collection = {
+        id: "favorites",
+        name: "My Favorites",
+        description: "Your starred and favorited leads across all searches",
+        leads: favLeads,
+        isArchived: false,
+        createdAt: new Date().toISOString(),
+      };
+      leads = favLeads;
+    } else {
+      const collections = await DBService.getCollections(userId);
+      collection = collections.find(c => c.id === collectionId);
+      if (!collection) {
+        return NextResponse.json({ error: "Collection not found" }, { status: 404 });
+      }
+      leads = collection.leads;
     }
 
-    const leads = collection.leads;
     const filename = `${collection.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}-export`;
 
     // Add log entry
-    await DBService.addLog("export", `Exported collection '${collection.name}' to ${format.toUpperCase()}`);
+    await DBService.addLog(userId, "export", `Exported collection '${collection.name}' to ${format.toUpperCase()}`);
 
     // --- CSV FORMAT ---
     if (format === "csv") {

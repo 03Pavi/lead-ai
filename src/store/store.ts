@@ -6,6 +6,7 @@ import userReducer from "../entities/user/model/user-slice";
 import leadReducer from "../entities/lead/model/lead-slice";
 import collectionReducer from "../entities/collection/model/collection-slice";
 import settingsReducer from "../entities/settings/model/settings-slice";
+import { clearCredentials } from "../entities/user/model/user-slice";
 
 const createNoopStorage = () => {
   return {
@@ -32,12 +33,28 @@ const persistConfig = {
   whitelist: ["user", "settings"], // Persist credentials and theme settings
 };
 
-const rootReducer = combineReducers({
+const appReducer = combineReducers({
   user: userReducer,
   lead: leadReducer,
   collection: collectionReducer,
   settings: settingsReducer,
 });
+
+// Wrap the combined reducer: on logout (clearCredentials), wipe lead & collection
+// slices back to their initial state so the next user doesn't see stale data.
+const rootReducer: typeof appReducer = (state, action) => {
+  if (action.type === clearCredentials.type) {
+    // Keep settings (theme, etc.) but reset user-specific data
+    return appReducer(
+      {
+        ...appReducer(undefined, { type: "@@INIT" }),
+        settings: state?.settings ?? appReducer(undefined, { type: "@@INIT" }).settings,
+      },
+      action
+    );
+  }
+  return appReducer(state, action);
+};
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 

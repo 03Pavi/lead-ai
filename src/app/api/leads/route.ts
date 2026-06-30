@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { DBService } from "@/shared/services/server/db-service";
 import { leadSchema } from "@/shared/validation/schemas";
+import { getUserIdFromRequest } from "@/shared/services/server/auth-helper";
 
 export async function POST(request: Request) {
   try {
+    const userId = getUserIdFromRequest(request);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { action, collectionId, leadId, lead } = body;
 
@@ -21,7 +27,7 @@ export async function POST(request: Request) {
         );
       }
 
-      const success = await DBService.saveLeadToCollection(collectionId, result.data);
+      const success = await DBService.saveLeadToCollection(userId, collectionId, result.data);
       if (!success) {
         return NextResponse.json({ error: "Collection not found" }, { status: 404 });
       }
@@ -34,7 +40,16 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "leadId is required" }, { status: 400 });
       }
 
-      const isFavorited = await DBService.toggleFavorite(leadId);
+      // Optionally validate the lead details if provided
+      let validatedLead = undefined;
+      if (lead) {
+        const result = leadSchema.safeParse(lead);
+        if (result.success) {
+          validatedLead = result.data;
+        }
+      }
+
+      const isFavorited = await DBService.toggleFavorite(userId, leadId, validatedLead);
       return NextResponse.json({ success: true, isFavorited });
     }
 
@@ -43,7 +58,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "collectionId and leadId are required" }, { status: 400 });
       }
 
-      const success = await DBService.removeLeadFromCollection(collectionId, leadId);
+      const success = await DBService.removeLeadFromCollection(userId, collectionId, leadId);
       if (!success) {
         return NextResponse.json({ error: "Collection or lead not found" }, { status: 404 });
       }

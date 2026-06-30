@@ -15,23 +15,19 @@ export interface SavedSearch {
   createdAt: string;
 }
 
-// In-Memory Fallback State (Mock Firestore Database)
-let localFolders: FolderInput[] = [
-  {
-    id: "folder-uk",
-    name: "UK Expansion Q3",
-    description: "Leads for our dental software sales push in London",
-    collectionIds: ["col-lon-dent"],
-    createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "folder-asia",
-    name: "APAC Restaurants",
-    description: "Target restaurants for reservation engine sales",
-    collectionIds: ["col-tok-rest"],
-    createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-  }
-];
+// ─── In-Memory Fallback State (per-user mock database) ─────────────────────
+// Each user gets their own isolated mock data, keyed by userId.
+// A default "mock" user is used when no userId is provided (unauthenticated mock mode).
+
+interface UserMockData {
+  folders: FolderInput[];
+  collections: CollectionInput[];
+  favorites: Map<string, LeadInput>;
+  activityLogs: ActivityLog[];
+  savedSearches: SavedSearch[];
+}
+
+const userMockStore = new Map<string, UserMockData>();
 
 const seedLeadsMap: Record<string, LeadInput[]> = {
   "col-lon-dent": [
@@ -79,78 +75,112 @@ const seedLeadsMap: Record<string, LeadInput[]> = {
   ]
 };
 
-let localCollections: CollectionInput[] = [
-  {
-    id: "col-lon-dent",
-    name: "London Dentists",
-    description: "Harley Street area high-rating clinics",
-    folderId: "folder-uk",
-    leads: seedLeadsMap["col-lon-dent"],
-    isArchived: false,
-    createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "col-tok-rest",
-    name: "Tokyo Ramen Shops",
-    description: "Central Shinjuku ramen spots with websites",
-    folderId: "folder-asia",
-    leads: seedLeadsMap["col-tok-rest"],
-    isArchived: false,
-    createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "col-archived-1",
-    name: "Old Gyms Berlin",
-    description: "Archived lead collection",
-    leads: [],
-    isArchived: true,
-    createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+function getOrCreateMockData(userId: string): UserMockData {
+  if (userMockStore.has(userId)) {
+    return userMockStore.get(userId)!;
   }
-];
 
-let localFavorites: Set<string> = new Set(["lon-dent-1"]);
+  // Seed default data for the first user, empty for others
+  const isFirst = userMockStore.size === 0;
+  const data: UserMockData = isFirst
+    ? {
+        folders: [
+          {
+            id: "folder-uk",
+            name: "UK Expansion Q3",
+            description: "Leads for our dental software sales push in London",
+            collectionIds: ["col-lon-dent"],
+            createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+          {
+            id: "folder-asia",
+            name: "APAC Restaurants",
+            description: "Target restaurants for reservation engine sales",
+            collectionIds: ["col-tok-rest"],
+            createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+        ],
+        collections: [
+          {
+            id: "col-lon-dent",
+            name: "London Dentists",
+            description: "Harley Street area high-rating clinics",
+            folderId: "folder-uk",
+            leads: seedLeadsMap["col-lon-dent"],
+            isArchived: false,
+            createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+          {
+            id: "col-tok-rest",
+            name: "Tokyo Ramen Shops",
+            description: "Central Shinjuku ramen spots with websites",
+            folderId: "folder-asia",
+            leads: seedLeadsMap["col-tok-rest"],
+            isArchived: false,
+            createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+          {
+            id: "col-archived-1",
+            name: "Old Gyms Berlin",
+            description: "Archived lead collection",
+            leads: [],
+            isArchived: true,
+            createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+        ],
+        favorites: new Map([["lon-dent-1", seedLeadsMap["col-lon-dent"][0]]]),
+        activityLogs: [
+          {
+            id: "log-1",
+            type: "export",
+            description: "Exported 52 London Dentists leads to Excel",
+            timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+          },
+          {
+            id: "log-2",
+            type: "lead_save",
+            description: "Saved 'Harley Street Dental Studio' to London Dentists collection",
+            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          },
+          {
+            id: "log-3",
+            type: "search",
+            description: "Searched: 'Find bakeries without websites in Paris'",
+            timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+          },
+          {
+            id: "log-4",
+            type: "collection_create",
+            description: "Created collection 'Tokyo Ramen Shops'",
+            timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+        ],
+        savedSearches: [
+          {
+            id: "search-1",
+            query: "Find 300 dentists in London",
+            parsedSummary: "dentist in London (Limit: 300)",
+            createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+          {
+            id: "search-2",
+            query: "Find bakeries without websites in Paris",
+            parsedSummary: "bakery in Paris (Without website, Limit: 50)",
+            createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+        ],
+      }
+    : {
+        folders: [],
+        collections: [],
+        favorites: new Map<string, LeadInput>(),
+        activityLogs: [],
+        savedSearches: [],
+      };
 
-let localActivityLogs: ActivityLog[] = [
-  {
-    id: "log-1",
-    type: "export",
-    description: "Exported 52 London Dentists leads to Excel",
-    timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "log-2",
-    type: "lead_save",
-    description: "Saved 'Harley Street Dental Studio' to London Dentists collection",
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "log-3",
-    type: "search",
-    description: "Searched: 'Find bakeries without websites in Paris'",
-    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "log-4",
-    type: "collection_create",
-    description: "Created collection 'Tokyo Ramen Shops'",
-    timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-  }
-];
-
-let localSavedSearches: SavedSearch[] = [
-  {
-    id: "search-1",
-    query: "Find 300 dentists in London",
-    parsedSummary: "dentist in London (Limit: 300)",
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "search-2",
-    query: "Find bakeries without websites in Paris",
-    parsedSummary: "bakery in Paris (Without website, Limit: 50)",
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-  }
-];
+  userMockStore.set(userId, data);
+  return data;
+}
 
 // Haversine Distance helper
 function calculateHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -167,12 +197,25 @@ function calculateHaversineDistance(lat1: number, lon1: number, lat2: number, lo
   return Number((R * c).toFixed(2));
 }
 
+/**
+ * Recursively strip `undefined` values from an object so Firebase RTDB
+ * doesn't throw "value argument contains undefined".
+ */
+function sanitizeForFirebase<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj));
+}
+
 export class DBService {
+  // ─── Helper: build user-scoped Firebase ref path ──────────────────────────
+  private static userRef(userId: string, path: string) {
+    return `users/${userId}/${path}`;
+  }
+
   // --- Folders CRUD ---
-  static async getFolders(): Promise<FolderInput[]> {
+  static async getFolders(userId: string): Promise<FolderInput[]> {
     if (useRealFirebase && db) {
       try {
-        const snap = await db.ref("folders").once("value");
+        const snap = await db.ref(this.userRef(userId, "folders")).once("value");
         if (snap.exists()) {
           const data = snap.val();
           return Object.values(data).map((f: any) => ({
@@ -185,10 +228,10 @@ export class DBService {
         console.error("Realtime DB getFolders failed:", err);
       }
     }
-    return localFolders;
+    return getOrCreateMockData(userId).folders;
   }
 
-  static async createFolder(data: { name: string; description?: string }): Promise<FolderInput> {
+  static async createFolder(userId: string, data: { name: string; description?: string }): Promise<FolderInput> {
     const newFolder: FolderInput = {
       id: `folder-${Math.random().toString(36).substr(2, 9)}`,
       name: data.name,
@@ -199,37 +242,37 @@ export class DBService {
 
     if (useRealFirebase && db) {
       try {
-        await db.ref(`folders/${newFolder.id}`).set(newFolder);
+        await db.ref(this.userRef(userId, `folders/${newFolder.id}`)).set(sanitizeForFirebase(newFolder));
       } catch (err) {
         console.error("Realtime DB createFolder failed:", err);
       }
     } else {
-      localFolders.push(newFolder);
+      getOrCreateMockData(userId).folders.push(newFolder);
     }
 
-    await this.addLog("collection_create", `Created folder '${newFolder.name}'`);
+    await this.addLog(userId, "collection_create", `Created folder '${newFolder.name}'`);
     return newFolder;
   }
 
-  static async deleteFolder(id: string): Promise<void> {
+  static async deleteFolder(userId: string, id: string): Promise<void> {
     let folderName = "";
 
     if (useRealFirebase && db) {
       try {
-        const folderRef = db.ref(`folders/${id}`);
+        const folderRef = db.ref(this.userRef(userId, `folders/${id}`));
         const folderSnap = await folderRef.once("value");
         if (folderSnap.exists()) {
           folderName = (folderSnap.val() as FolderInput).name;
           await folderRef.remove();
           
           // Remove folder references from collections
-          const colsSnap = await db.ref("collections").once("value");
+          const colsSnap = await db.ref(this.userRef(userId, "collections")).once("value");
           if (colsSnap.exists()) {
             const collectionsVal = colsSnap.val();
             const updates: Record<string, any> = {};
             for (const key of Object.keys(collectionsVal)) {
               if (collectionsVal[key].folderId === id) {
-                updates[`collections/${key}/folderId`] = "";
+                updates[this.userRef(userId, `collections/${key}/folderId`)] = "";
               }
             }
             if (Object.keys(updates).length > 0) {
@@ -241,26 +284,27 @@ export class DBService {
         console.error("Realtime DB deleteFolder failed:", err);
       }
     } else {
-      const folder = localFolders.find((f) => f.id === id);
+      const mock = getOrCreateMockData(userId);
+      const folder = mock.folders.find((f) => f.id === id);
       if (folder) {
         folderName = folder.name;
-        localFolders = localFolders.filter((f) => f.id !== id);
-        localCollections = localCollections.map((c) =>
+        mock.folders = mock.folders.filter((f) => f.id !== id);
+        mock.collections = mock.collections.map((c) =>
           c.folderId === id ? { ...c, folderId: undefined } : c
         );
       }
     }
 
     if (folderName) {
-      await this.addLog("collection_create", `Deleted folder '${folderName}'`);
+      await this.addLog(userId, "collection_create", `Deleted folder '${folderName}'`);
     }
   }
 
   // --- Collections CRUD ---
-  static async getCollections(): Promise<CollectionInput[]> {
+  static async getCollections(userId: string): Promise<CollectionInput[]> {
     if (useRealFirebase && db) {
       try {
-        const snap = await db.ref("collections").once("value");
+        const snap = await db.ref(this.userRef(userId, "collections")).once("value");
         if (snap.exists()) {
           const data = snap.val();
           return Object.values(data).map((c: any) => ({
@@ -273,10 +317,10 @@ export class DBService {
         console.error("Realtime DB getCollections failed:", err);
       }
     }
-    return localCollections;
+    return getOrCreateMockData(userId).collections;
   }
 
-  static async createCollection(data: { name: string; description?: string; folderId?: string }): Promise<CollectionInput> {
+  static async createCollection(userId: string, data: { name: string; description?: string; folderId?: string }): Promise<CollectionInput> {
     const newCol: CollectionInput = {
       id: `col-${Math.random().toString(36).substr(2, 9)}`,
       name: data.name,
@@ -289,9 +333,9 @@ export class DBService {
 
     if (useRealFirebase && db) {
       try {
-        await db.ref(`collections/${newCol.id}`).set(newCol);
+        await db.ref(this.userRef(userId, `collections/${newCol.id}`)).set(sanitizeForFirebase(newCol));
         if (data.folderId) {
-          const folderRef = db.ref(`folders/${data.folderId}`);
+          const folderRef = db.ref(this.userRef(userId, `folders/${data.folderId}`));
           const fSnap = await folderRef.once("value");
           if (fSnap.exists()) {
             const f = fSnap.val() as FolderInput;
@@ -303,22 +347,23 @@ export class DBService {
         console.error("Realtime DB createCollection failed:", err);
       }
     } else {
-      localCollections.push(newCol);
+      const mock = getOrCreateMockData(userId);
+      mock.collections.push(newCol);
       if (data.folderId) {
-        localFolders = localFolders.map((f) =>
+        mock.folders = mock.folders.map((f) =>
           f.id === data.folderId ? { ...f, collectionIds: [...(f.collectionIds || []), newCol.id] } : f
         );
       }
     }
 
-    await this.addLog("collection_create", `Created collection '${newCol.name}'`);
+    await this.addLog(userId, "collection_create", `Created collection '${newCol.name}'`);
     return newCol;
   }
 
-  static async updateCollection(id: string, updates: Partial<CollectionInput>): Promise<CollectionInput | undefined> {
+  static async updateCollection(userId: string, id: string, updates: Partial<CollectionInput>): Promise<CollectionInput | undefined> {
     if (useRealFirebase && db) {
       try {
-        const colRef = db.ref(`collections/${id}`);
+        const colRef = db.ref(this.userRef(userId, `collections/${id}`));
         const colSnap = await colRef.once("value");
         if (!colSnap.exists()) return undefined;
 
@@ -328,7 +373,7 @@ export class DBService {
 
         if (updates.folderId !== undefined && updates.folderId !== old.folderId) {
           if (old.folderId) {
-            const oldFolderRef = db.ref(`folders/${old.folderId}`);
+            const oldFolderRef = db.ref(this.userRef(userId, `folders/${old.folderId}`));
             const fSnap = await oldFolderRef.once("value");
             if (fSnap.exists()) {
               const f = fSnap.val() as FolderInput;
@@ -337,7 +382,7 @@ export class DBService {
             }
           }
           if (updates.folderId) {
-            const newFolderRef = db.ref(`folders/${updates.folderId}`);
+            const newFolderRef = db.ref(this.userRef(userId, `folders/${updates.folderId}`));
             const fSnap = await newFolderRef.once("value");
             if (fSnap.exists()) {
               const f = fSnap.val() as FolderInput;
@@ -351,21 +396,22 @@ export class DBService {
         console.error("Realtime DB updateCollection failed:", err);
       }
     } else {
-      const idx = localCollections.findIndex((c) => c.id === id);
+      const mock = getOrCreateMockData(userId);
+      const idx = mock.collections.findIndex((c) => c.id === id);
       if (idx === -1) return undefined;
 
-      const old = localCollections[idx];
+      const old = mock.collections[idx];
       const updated = { ...old, ...updates };
-      localCollections[idx] = updated;
+      mock.collections[idx] = updated;
 
       if (updates.folderId !== undefined && updates.folderId !== old.folderId) {
         if (old.folderId) {
-          localFolders = localFolders.map((f) =>
+          mock.folders = mock.folders.map((f) =>
             f.id === old.folderId ? { ...f, collectionIds: (f.collectionIds || []).filter(cid => cid !== id) } : f
           );
         }
         if (updates.folderId) {
-          localFolders = localFolders.map((f) =>
+          mock.folders = mock.folders.map((f) =>
             f.id === updates.folderId ? { ...f, collectionIds: [...(f.collectionIds || []), id] } : f
           );
         }
@@ -374,13 +420,13 @@ export class DBService {
     }
   }
 
-  static async deleteCollection(id: string): Promise<void> {
+  static async deleteCollection(userId: string, id: string): Promise<void> {
     let colName = "";
     let folderId = "";
 
     if (useRealFirebase && db) {
       try {
-        const colRef = db.ref(`collections/${id}`);
+        const colRef = db.ref(this.userRef(userId, `collections/${id}`));
         const colSnap = await colRef.once("value");
         if (colSnap.exists()) {
           const col = colSnap.val() as CollectionInput;
@@ -389,7 +435,7 @@ export class DBService {
           await colRef.remove();
 
           if (folderId) {
-            const folderRef = db.ref(`folders/${folderId}`);
+            const folderRef = db.ref(this.userRef(userId, `folders/${folderId}`));
             const fSnap = await folderRef.once("value");
             if (fSnap.exists()) {
               const f = fSnap.val() as FolderInput;
@@ -402,14 +448,15 @@ export class DBService {
         console.error("Realtime DB deleteCollection failed:", err);
       }
     } else {
-      const col = localCollections.find((c) => c.id === id);
+      const mock = getOrCreateMockData(userId);
+      const col = mock.collections.find((c) => c.id === id);
       if (col) {
         colName = col.name;
         folderId = col.folderId || "";
-        localCollections = localCollections.filter((c) => c.id !== id);
+        mock.collections = mock.collections.filter((c) => c.id !== id);
 
         if (folderId) {
-          localFolders = localFolders.map((f) =>
+          mock.folders = mock.folders.map((f) =>
             f.id === folderId ? { ...f, collectionIds: (f.collectionIds || []).filter(cid => cid !== id) } : f
           );
         }
@@ -417,15 +464,15 @@ export class DBService {
     }
 
     if (colName) {
-      await this.addLog("collection_create", `Deleted collection '${colName}'`);
+      await this.addLog(userId, "collection_create", `Deleted collection '${colName}'`);
     }
   }
 
   // --- Leads Management ---
-  static async saveLeadToCollection(collectionId: string, lead: LeadInput): Promise<boolean> {
+  static async saveLeadToCollection(userId: string, collectionId: string, lead: LeadInput): Promise<boolean> {
     if (useRealFirebase && db) {
       try {
-        const colRef = db.ref(`collections/${collectionId}`);
+        const colRef = db.ref(this.userRef(userId, `collections/${collectionId}`));
         const colSnap = await colRef.once("value");
         if (!colSnap.exists()) return false;
 
@@ -435,28 +482,29 @@ export class DBService {
 
         const newLeads = [...leads, lead];
         await colRef.update({ leads: newLeads });
-        await this.addLog("lead_save", `Saved '${lead.name}' to collection '${col.name}'`);
+        await this.addLog(userId, "lead_save", `Saved '${lead.name}' to collection '${col.name}'`);
         return true;
       } catch (err) {
         console.error("Realtime DB saveLeadToCollection failed:", err);
       }
     } else {
-      const col = localCollections.find((c) => c.id === collectionId);
+      const mock = getOrCreateMockData(userId);
+      const col = mock.collections.find((c) => c.id === collectionId);
       if (!col) return false;
 
       if (col.leads.some((l) => l.id === lead.id)) return true;
       col.leads.push(lead);
       
-      await this.addLog("lead_save", `Saved '${lead.name}' to collection '${col.name}'`);
+      await this.addLog(userId, "lead_save", `Saved '${lead.name}' to collection '${col.name}'`);
       return true;
     }
     return false;
   }
 
-  static async removeLeadFromCollection(collectionId: string, leadId: string): Promise<boolean> {
+  static async removeLeadFromCollection(userId: string, collectionId: string, leadId: string): Promise<boolean> {
     if (useRealFirebase && db) {
       try {
-        const colRef = db.ref(`collections/${collectionId}`);
+        const colRef = db.ref(this.userRef(userId, `collections/${collectionId}`));
         const colSnap = await colRef.once("value");
         if (!colSnap.exists()) return false;
 
@@ -467,73 +515,85 @@ export class DBService {
 
         const newLeads = leads.filter((l) => l.id !== leadId);
         await colRef.update({ leads: newLeads });
-        await this.addLog("lead_save", `Removed '${lead.name}' from collection '${col.name}'`);
+        await this.addLog(userId, "lead_save", `Removed '${lead.name}' from collection '${col.name}'`);
         return true;
       } catch (err) {
         console.error("Realtime DB removeLeadFromCollection failed:", err);
       }
     } else {
-      const col = localCollections.find((c) => c.id === collectionId);
+      const mock = getOrCreateMockData(userId);
+      const col = mock.collections.find((c) => c.id === collectionId);
       if (!col) return false;
 
       const lead = col.leads.find((l) => l.id === leadId);
       if (!lead) return false;
 
       col.leads = col.leads.filter((l) => l.id !== leadId);
-      await this.addLog("lead_save", `Removed '${lead.name}' from collection '${col.name}'`);
+      await this.addLog(userId, "lead_save", `Removed '${lead.name}' from collection '${col.name}'`);
       return true;
     }
     return false;
   }
 
   // --- Favorites Management ---
-  static async toggleFavorite(leadId: string): Promise<boolean> {
+  static async toggleFavorite(userId: string, leadId: string, lead?: LeadInput): Promise<boolean> {
     if (useRealFirebase && db) {
       try {
-        const favRef = db.ref(`favorites/${leadId}`);
+        const favRef = db.ref(this.userRef(userId, `favorites/${leadId}`));
         const favSnap = await favRef.once("value");
         if (favSnap.exists()) {
           await favRef.remove();
           return false;
         } else {
-          await favRef.set({ leadId, createdAt: new Date().toISOString() });
+          const payload = lead 
+            ? { ...lead, createdAt: new Date().toISOString() }
+            : { id: leadId, name: "Favorite", category: "Unknown", address: "Unknown", coordinates: { lat: 0, lng: 0 }, createdAt: new Date().toISOString() };
+          await favRef.set(sanitizeForFirebase(payload));
           return true;
         }
       } catch (err) {
         console.error("Realtime DB toggleFavorite failed:", err);
       }
     } else {
-      if (localFavorites.has(leadId)) {
-        localFavorites.delete(leadId);
+      const mock = getOrCreateMockData(userId);
+      if (mock.favorites.has(leadId)) {
+        mock.favorites.delete(leadId);
         return false;
       } else {
-        localFavorites.add(leadId);
+        const fallbackLead: LeadInput = lead || {
+          id: leadId,
+          name: "Favorite",
+          category: "Unknown",
+          address: "Unknown",
+          coordinates: { lat: 0, lng: 0 },
+        };
+        mock.favorites.set(leadId, fallbackLead);
         return true;
       }
     }
     return false;
   }
 
-  static async getFavorites(): Promise<string[]> {
+  static async getFavorites(userId: string): Promise<LeadInput[]> {
     if (useRealFirebase && db) {
       try {
-        const snap = await db.ref("favorites").once("value");
+        const snap = await db.ref(this.userRef(userId, "favorites")).once("value");
         if (snap.exists()) {
-          return Object.keys(snap.val());
+          return Object.values(snap.val()) as LeadInput[];
         }
         return [];
       } catch (err) {
         console.error("Realtime DB getFavorites failed:", err);
       }
     }
-    return Array.from(localFavorites);
+    return Array.from(getOrCreateMockData(userId).favorites.values());
   }
 
   // --- Saved Searches CRUD ---
-  static async getSavedSearches(): Promise<SavedSearch[]> {
+  static async getSavedSearches(userId: string): Promise<SavedSearch[]> {
     if (useRealFirebase && db) {
       try {
-        const snap = await db.ref("searches").once("value");
+        const snap = await db.ref(this.userRef(userId, "searches")).once("value");
         if (snap.exists()) {
           const data = snap.val();
           const list = Object.values(data) as SavedSearch[];
@@ -544,10 +604,10 @@ export class DBService {
         console.error("Realtime DB getSavedSearches failed:", err);
       }
     }
-    return localSavedSearches;
+    return getOrCreateMockData(userId).savedSearches;
   }
 
-  static async saveSearch(queryStr: string, parsedSummary: string): Promise<SavedSearch> {
+  static async saveSearch(userId: string, queryStr: string, parsedSummary: string): Promise<SavedSearch> {
     const newSearch: SavedSearch = {
       id: `search-${Math.random().toString(36).substr(2, 9)}`,
       query: queryStr,
@@ -557,35 +617,36 @@ export class DBService {
 
     if (useRealFirebase && db) {
       try {
-        await db.ref(`searches/${newSearch.id}`).set(newSearch);
+        await db.ref(this.userRef(userId, `searches/${newSearch.id}`)).set(sanitizeForFirebase(newSearch));
       } catch (err) {
         console.error("Realtime DB saveSearch failed:", err);
       }
     } else {
-      localSavedSearches.unshift(newSearch);
+      getOrCreateMockData(userId).savedSearches.unshift(newSearch);
     }
 
-    await this.addLog("search", `Saved search: "${queryStr}"`);
+    await this.addLog(userId, "search", `Saved search: "${queryStr}"`);
     return newSearch;
   }
 
-  static async deleteSavedSearch(id: string): Promise<void> {
+  static async deleteSavedSearch(userId: string, id: string): Promise<void> {
     if (useRealFirebase && db) {
       try {
-        await db.ref(`searches/${id}`).remove();
+        await db.ref(this.userRef(userId, `searches/${id}`)).remove();
       } catch (err) {
         console.error("Realtime DB deleteSavedSearch failed:", err);
       }
     } else {
-      localSavedSearches = localSavedSearches.filter((s) => s.id !== id);
+      const mock = getOrCreateMockData(userId);
+      mock.savedSearches = mock.savedSearches.filter((s) => s.id !== id);
     }
   }
 
   // --- Activity Log & Dashboard Telemetry ---
-  static async getActivityLogs(): Promise<ActivityLog[]> {
+  static async getActivityLogs(userId: string): Promise<ActivityLog[]> {
     if (useRealFirebase && db) {
       try {
-        const snap = await db.ref("logs").once("value");
+        const snap = await db.ref(this.userRef(userId, "logs")).once("value");
         if (snap.exists()) {
           const data = snap.val();
           const list = Object.values(data) as ActivityLog[];
@@ -598,10 +659,10 @@ export class DBService {
         console.error("Realtime DB getActivityLogs failed:", err);
       }
     }
-    return localActivityLogs;
+    return getOrCreateMockData(userId).activityLogs;
   }
 
-  static async addLog(type: ActivityLog["type"], description: string): Promise<void> {
+  static async addLog(userId: string, type: ActivityLog["type"], description: string): Promise<void> {
     const newLog: ActivityLog = {
       id: `log-${Math.random().toString(36).substr(2, 9)}`,
       type,
@@ -611,23 +672,41 @@ export class DBService {
 
     if (useRealFirebase && db) {
       try {
-        await db.ref(`logs/${newLog.id}`).set(newLog);
+        const logsRef = db.ref(this.userRef(userId, "logs"));
+        await logsRef.child(newLog.id).set(sanitizeForFirebase(newLog));
+        
+        // Fetch all logs to prune so we only keep the newest 6
+        const snap = await logsRef.once("value");
+        if (snap.exists()) {
+          const data = snap.val();
+          const list = Object.values(data) as ActivityLog[];
+          if (list.length > 6) {
+            // Sort ascending by timestamp (oldest first)
+            list.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+            // Identify how many to remove
+            const overflowCount = list.length - 6;
+            for (let i = 0; i < overflowCount; i++) {
+              await logsRef.child(list[i].id).remove();
+            }
+          }
+        }
       } catch (err) {
         console.error("Realtime DB addLog failed:", err);
       }
     } else {
-      localActivityLogs.unshift(newLog);
-      if (localActivityLogs.length > 50) {
-        localActivityLogs = localActivityLogs.slice(0, 50);
+      const mock = getOrCreateMockData(userId);
+      mock.activityLogs.unshift(newLog);
+      if (mock.activityLogs.length > 6) {
+        mock.activityLogs = mock.activityLogs.slice(0, 6);
       }
     }
   }
 
-  static async getTelemetryMetrics() {
-    const collectionsList = await this.getCollections();
-    const foldersList = await this.getFolders();
-    const searchesList = await this.getSavedSearches();
-    const logsList = await this.getActivityLogs();
+  static async getTelemetryMetrics(userId: string) {
+    const collectionsList = await this.getCollections(userId);
+    const foldersList = await this.getFolders(userId);
+    const searchesList = await this.getSavedSearches(userId);
+    const logsList = await this.getActivityLogs(userId);
 
     const totalSavedLeads = collectionsList
       .filter((c) => !c.isArchived)

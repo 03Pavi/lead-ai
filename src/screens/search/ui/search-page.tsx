@@ -64,6 +64,7 @@ import {
   setSearchSuccess,
   setSearchFailure,
   toggleLocalFavorite,
+  setFavorites,
 } from "@/entities/lead/model/lead-slice";
 import { setUseNearMe, setUserLocation } from "@/entities/settings/model/settings-slice";
 import {
@@ -166,6 +167,9 @@ export default function SearchPage() {
               savedSearches: res.savedSearches,
             })
           );
+          if (res.favorites) {
+            dispatch(setFavorites(res.favorites));
+          }
         }
       } catch (err) {
         console.error("Failed to load collections for lead saver:", err);
@@ -342,7 +346,8 @@ export default function SearchPage() {
 
   const handleFavoriteToggle = async (leadId: string) => {
     try {
-      const res = await leadApi.toggleFavorite(leadId);
+      const lead = searchResults.find(l => l.id === leadId);
+      const res = await leadApi.toggleFavorite(leadId, lead);
       if (res.success) {
         dispatch(toggleLocalFavorite(leadId));
       }
